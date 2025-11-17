@@ -1,0 +1,85 @@
+@import 'tailwindcss';
+
+:root {
+  /* Brand Colors */
+  --primary-yellow: #FFF8DC;
+  --primary-black: #1a1a1a;
+  --accent-gold: #D4AF37;
+  
+  /* Semantic Colors */
+  --background: #ffffff;
+  --foreground: #1a1a1a;
+  --card: #f8f8f8;
+  --card-foreground: #1a1a1a;
+  --muted: #e5e5e5;
+  --muted-foreground: #666666;
+  --border: #e0e0e0;
+  --input: #f0f0f0;
+  
+  /* Status Colors */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
+  
+  --radius: 0.625rem;
+}
+
+.dark {
+  --primary-yellow: #2a2416;
+  --primary-black: #ffffff;
+  --accent-gold: #f9d371;
+  
+  --background: #1a1a1a;
+  --foreground: #ffffff;
+  --card: #2a2a2a;
+  --card-foreground: #ffffff;
+  --muted: #404040;
+  --muted-foreground: #999999;
+  --border: #333333;
+  --input: #2a2a2a;
+}
+
+@theme inline {
+  --font-sans: 'Geist', 'Geist Fallback';
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    /* Removed invalid outline-ring/50 class - only apply border color */
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Utility classes for brand colors */
+.bg-primary-yellow {
+  @apply bg-[#FFF8DC];
+}
+
+.dark .bg-primary-yellow {
+  @apply bg-[#2a2416];
+}
+
+.bg-primary-black {
+  @apply bg-[#1a1a1a];
+}
+
+.dark .bg-primary-black {
+  @apply bg-[#ffffff];
+}
