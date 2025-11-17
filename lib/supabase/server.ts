@@ -6,7 +6,22 @@ export async function createServerSupabaseClient() {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!url || !key) {
-    throw new Error('Missing Supabase environment variables')
+    console.warn('Missing Supabase environment variables. Using placeholder client.')
+    // Return a mock client for build time
+    return {
+      from: () => ({
+        select: () => ({ data: null, error: new Error('Missing Supabase environment variables') }),
+        insert: () => ({ data: null, error: new Error('Missing Supabase environment variables') }),
+        update: () => ({ data: null, error: new Error('Missing Supabase environment variables') }),
+        delete: () => ({ data: null, error: new Error('Missing Supabase environment variables') }),
+        eq: function() { return this },
+        single: function() { return this },
+        order: function() { return this },
+      }),
+      auth: {
+        getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      },
+    } as any
   }
 
   const cookieStore = await cookies()

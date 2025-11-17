@@ -16,28 +16,8 @@ const SKILL_CATEGORIES = [
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const supabase = await createServerSupabaseClient()
-  
-  // Fetch all jobs
-  const { data: jobs } = await supabase
-    .from('jobs')
-    .select('id, created_at')
-    .order('created_at', { ascending: false })
-
-  // Fetch all blogs
-  const { data: blogs } = await supabase
-    .from('blogs')
-    .select('slug, created_at')
-    .order('created_at', { ascending: false })
-
-  // Fetch all career insights
-  const { data: insights } = await supabase
-    .from('career_insights')
-    .select('slug, created_at')
-    .order('created_at', { ascending: false })
-
   const baseUrl = 'https://worldcareers.rw'
-
+  
   // Main pages
   const routes: MetadataRoute.Sitemap = [
     {
@@ -48,6 +28,55 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     {
       url: `${baseUrl}/jobs`,
+      lastModified: new Date(),
+      changeFrequency: 'hourly',
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/blogs`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/career-insights`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/about`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+  ]
+
+  try {
+    const supabase = await createServerSupabaseClient()
+    
+    // Fetch all jobs
+    const { data: jobs, error: jobsError } = await supabase
+      .from('jobs')
+      .select('id, created_at')
+      .order('created_at', { ascending: false })
+
+    // Fetch all blogs
+    const { data: blogs, error: blogsError } = await supabase
+      .from('blogs')
+      .select('slug, created_at')
+      .order('created_at', { ascending: false })
+
+    // Fetch all career insights
+    const { data: insights, error: insightsError } = await supabase
+      .from('career_insights')
+      .select('slug, created_at')
+      .order('created_at', { ascending: false })
+
+    // Log errors but don't fail
+    if (jobsError) console.warn('Error fetching jobs for sitemap:', jobsError.message)
+    if (blogsError) console.warn('Error fetching blogs for sitemap:', blogsError.message)
+    if (insightsError) console.warn('Error fetching insights for sitemap:', insightsError.message)
       lastModified: new Date(),
       changeFrequency: 'hourly',
       priority: 0.9,
@@ -93,7 +122,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   })
 
   // Add job pages
-  if (jobs) {
+  if (jobs && !jobsError) {
     jobs.forEach(job => {
       routes.push({
         url: `${baseUrl}/job/${job.id}`,
@@ -105,7 +134,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // Add blog pages
-  if (blogs) {
+  if (blogs && !blogsError) {
     blogs.forEach(blog => {
       routes.push({
         url: `${baseUrl}/blog/${blog.slug}`,
@@ -117,7 +146,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // Add career insight pages
-  if (insights) {
+  if (insights && !insightsError) {
     insights.forEach(insight => {
       routes.push({
         url: `${baseUrl}/career-insights/${insight.slug}`,
@@ -126,6 +155,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.6,
       })
     })
+  }
+  } catch (error) {
+    console.warn('Error generating sitemap:', error)
+    // Continue with static routes only
   }
 
   return routes
