@@ -77,85 +77,62 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (jobsError) console.warn('Error fetching jobs for sitemap:', jobsError.message)
     if (blogsError) console.warn('Error fetching blogs for sitemap:', blogsError.message)
     if (insightsError) console.warn('Error fetching insights for sitemap:', insightsError.message)
-      lastModified: new Date(),
-      changeFrequency: 'hourly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/blogs`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/career-insights`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/about`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-  ]
 
-  // Add district pages
-  RWANDA_DISTRICTS.forEach(district => {
-    routes.push({
-      url: `${baseUrl}/jobs/${district}`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.8,
-    })
-  })
-
-  // Add skill category pages
-  SKILL_CATEGORIES.forEach(category => {
-    routes.push({
-      url: `${baseUrl}/jobs/category/${category}`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.7,
-    })
-  })
-
-  // Add job pages
-  if (jobs && !jobsError) {
-    jobs.forEach(job => {
+    // Add district pages
+    RWANDA_DISTRICTS.forEach(district => {
       routes.push({
-        url: `${baseUrl}/job/${job.id}`,
-        lastModified: new Date(job.created_at),
-        changeFrequency: 'weekly',
-        priority: 0.6,
+        url: `${baseUrl}/jobs/${district}`,
+        lastModified: new Date(),
+        changeFrequency: 'daily',
+        priority: 0.8,
       })
     })
-  }
 
-  // Add blog pages
-  if (blogs && !blogsError) {
-    blogs.forEach(blog => {
+    // Add skill category pages
+    SKILL_CATEGORIES.forEach(category => {
       routes.push({
-        url: `${baseUrl}/blog/${blog.slug}`,
-        lastModified: new Date(blog.created_at),
-        changeFrequency: 'monthly',
-        priority: 0.6,
+        url: `${baseUrl}/jobs/category/${category}`,
+        lastModified: new Date(),
+        changeFrequency: 'daily',
+        priority: 0.7,
       })
     })
-  }
 
-  // Add career insight pages
-  if (insights && !insightsError) {
-    insights.forEach(insight => {
-      routes.push({
-        url: `${baseUrl}/career-insights/${insight.slug}`,
-        lastModified: new Date(insight.created_at),
-        changeFrequency: 'monthly',
-        priority: 0.6,
+    // Add job pages
+    if (jobs && !jobsError) {
+      jobs.forEach(job => {
+        routes.push({
+          url: `${baseUrl}/job/${job.id}`,
+          lastModified: new Date(job.created_at),
+          changeFrequency: 'weekly',
+          priority: 0.6,
+        })
       })
-    })
-  }
+    }
+
+    // Add blog pages
+    if (blogs && !blogsError) {
+      blogs.forEach(blog => {
+        routes.push({
+          url: `${baseUrl}/blog/${blog.slug}`,
+          lastModified: new Date(blog.created_at),
+          changeFrequency: 'monthly',
+          priority: 0.6,
+        })
+      })
+    }
+
+    // Add career insight pages
+    if (insights && !insightsError) {
+      insights.forEach(insight => {
+        routes.push({
+          url: `${baseUrl}/career-insights/${insight.slug}`,
+          lastModified: new Date(insight.created_at),
+          changeFrequency: 'monthly',
+          priority: 0.6,
+        })
+      })
+    }
   } catch (error) {
     console.warn('Error generating sitemap:', error)
     // Continue with static routes only
