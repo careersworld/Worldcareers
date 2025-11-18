@@ -23,24 +23,76 @@ import { useRouter } from 'next/navigation'
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('jobs')
-  const [stats, setStats] = useState({ 
-    jobs: 0, 
-    blogs: 0, 
-    insights: 0, 
+  const [stats, setStats] = useState({
+    jobs: 0,
+    blogs: 0,
+    insights: 0,
     companies: 0,
-    jobViews: 0, 
-    blogViews: 0, 
-    insightViews: 0 
+    jobViews: 0,
+    blogViews: 0,
+    insightViews: 0
   })
+  const [loading, setLoading] = useState(true)
   const supabase = createClient()
   const router = useRouter()
 
   useEffect(() => {
-    fetchStats()
+    checkAuth()
   }, [])
+
+  const checkAuth = async () => {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser()
+
+      if (error || !user) {
+        router.push('/login')
+        return
+      }
+
+      // Check if user has admin role
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError || profile?.role !== 'admin') {
+        // Not an admin, redirect to candidate dashboard
+        router.push('/candidate/dashboard')
+        return
+      }
+
+      // User is authenticated and is an admin
+      setLoading(false)
+      fetchStats()
+    } catch (error) {
+      console.error('Error checking auth:', error)
+      router.push('/login')
+    }
+  }
 
   const fetchStats = async () => {
     try {
+      // Try to use materialized view first (fastest)
+      const { data: statsView } = await supabase
+        .from('dashboard_stats')
+        .select('*')
+        .single()
+
+      if (statsView) {
+        setStats({
+          jobs: statsView.active_jobs || 0,
+          blogs: statsView.total_blogs || 0,
+          insights: statsView.total_insights || 0,
+          companies: statsView.total_companies || 0,
+          jobViews: statsView.total_job_views || 0,
+          blogViews: statsView.total_blog_views || 0,
+          insightViews: statsView.total_insight_views || 0
+        })
+        return
+      }
+
+      // Fallback to individual queries if materialized view doesn't exist
       const [jobsRes, blogsRes, insightsRes, companiesRes] = await Promise.all([
         supabase.from('jobs').select('id, views_count', { count: 'exact' }),
         supabase.from('blogs').select('id, views_count', { count: 'exact' }),
@@ -48,9 +100,9 @@ export default function AdminDashboard() {
         supabase.from('companies').select('id', { count: 'exact' })
       ])
 
-      const jobViews = (jobsRes.data || []).reduce((sum, job) => sum + (job.views_count || 0), 0)
-      const blogViews = (blogsRes.data || []).reduce((sum, blog) => sum + (blog.views_count || 0), 0)
-      const insightViews = (insightsRes.data || []).reduce((sum, insight) => sum + (insight.views_count || 0), 0)
+      const jobViews = (jobsRes.data || []).reduce((sum: number, job: any) => sum + (job.views_count || 0), 0)
+      const blogViews = (blogsRes.data || []).reduce((sum: number, blog: any) => sum + (blog.views_count || 0), 0)
+      const insightViews = (insightsRes.data || []).reduce((sum: number, insight: any) => sum + (insight.views_count || 0), 0)
 
       setStats({
         jobs: jobsRes.count || 0,
@@ -74,6 +126,14 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Error signing out:', error)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-600">Loading dashboard...</p>
+      </div>
+    )
   }
 
   return (

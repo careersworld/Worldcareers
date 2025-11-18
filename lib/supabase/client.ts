@@ -1,4 +1,4 @@
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 let client: SupabaseClient | null = null
@@ -13,38 +13,37 @@ export function createClient() {
     console.warn('Missing Supabase environment variables. Using placeholder client.')
     // Return a mock client for build time with chainable methods
     const mockQuery = {
-      select: function() { return this },
-      insert: function() { return this },
-      update: function() { return this },
-      delete: function() { return this },
-      eq: function() { return this },
-      neq: function() { return this },
-      gt: function() { return this },
-      gte: function() { return this },
-      lt: function() { return this },
-      lte: function() { return this },
-      like: function() { return this },
-      ilike: function() { return this },
-      is: function() { return this },
-      in: function() { return this },
-      contains: function() { return this },
-      containedBy: function() { return this },
-      range: function() { return this },
-      or: function() { return this },
-      and: function() { return this },
-      not: function() { return this },
-      filter: function() { return this },
-      match: function() { return this },
-      order: function() { return this },
-      limit: function() { return this },
-      range: function() { return this },
-      single: function() { return Promise.resolve({ data: null, error: null }) },
-      maybeSingle: function() { return Promise.resolve({ data: null, error: null }) },
-      then: function(resolve: any) { 
+      select: function () { return this },
+      insert: function () { return this },
+      update: function () { return this },
+      delete: function () { return this },
+      eq: function () { return this },
+      neq: function () { return this },
+      gt: function () { return this },
+      gte: function () { return this },
+      lt: function () { return this },
+      lte: function () { return this },
+      like: function () { return this },
+      ilike: function () { return this },
+      is: function () { return this },
+      in: function () { return this },
+      contains: function () { return this },
+      containedBy: function () { return this },
+      range: function () { return this },
+      or: function () { return this },
+      and: function () { return this },
+      not: function () { return this },
+      filter: function () { return this },
+      match: function () { return this },
+      order: function () { return this },
+      limit: function () { return this },
+      single: function () { return Promise.resolve({ data: null, error: null }) },
+      maybeSingle: function () { return Promise.resolve({ data: null, error: null }) },
+      then: function (resolve: any) {
         return resolve({ data: [], error: null })
       },
     }
-    
+
     return {
       from: () => mockQuery,
       auth: {
@@ -56,7 +55,7 @@ export function createClient() {
         onAuthStateChange: (callback: any) => {
           // Return a mock subscription
           return {
-            data: { subscription: { unsubscribe: () => {} } },
+            data: { subscription: { unsubscribe: () => { } } },
             error: null
           }
         },
@@ -74,16 +73,9 @@ export function createClient() {
     } as any
   }
 
-  client = createSupabaseClient(
+  client = createBrowserClient(
     supabaseUrl,
-    supabaseKey,
-    {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-      },
-    }
+    supabaseKey
   )
 
   return client
