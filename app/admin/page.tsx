@@ -38,6 +38,45 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     checkAuth()
+
+    // Set up real-time subscriptions for stats updates
+    const jobsChannel = supabase
+      .channel('admin-jobs-stats')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'jobs'
+        },
+        () => {
+          console.log('Jobs updated, refreshing stats...')
+          fetchStats()
+        }
+      )
+      .subscribe()
+
+    const applicationsChannel = supabase
+      .channel('admin-applications-stats')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'job_applications'
+        },
+        () => {
+          console.log('Applications updated, refreshing stats...')
+          fetchStats()
+        }
+      )
+      .subscribe()
+
+    // Cleanup subscriptions
+    return () => {
+      supabase.removeChannel(jobsChannel)
+      supabase.removeChannel(applicationsChannel)
+    }
   }, [])
 
   const checkAuth = async () => {
@@ -50,15 +89,15 @@ export default function AdminDashboard() {
       }
 
       // Check if user has admin role
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
+      const role = user.user_metadata?.role
 
-      if (profileError || profile?.role !== 'admin') {
-        // Not an admin, redirect to candidate dashboard
-        router.push('/candidate/dashboard')
+      if (role !== 'admin') {
+        // Not an admin, redirect to candidate dashboard or company dashboard
+        if (role === 'company') {
+          router.push('/company/dashboard')
+        } else {
+          router.push('/candidate/dashboard')
+        }
         return
       }
 
@@ -97,7 +136,7 @@ export default function AdminDashboard() {
         supabase.from('jobs').select('id, views_count', { count: 'exact' }),
         supabase.from('blogs').select('id, views_count', { count: 'exact' }),
         supabase.from('career_insights').select('id, views_count', { count: 'exact' }),
-        supabase.from('companies').select('id', { count: 'exact' })
+        supabase.from('company_profiles').select('id', { count: 'exact' })
       ])
 
       const jobViews = (jobsRes.data || []).reduce((sum: number, job: any) => sum + (job.views_count || 0), 0)

@@ -152,8 +152,9 @@ export async function getUserProfile(userId: string) {
 
     return cachedQuery(cacheKey, async () => {
         const supabase = createClient()
+        // Try to fetch from the unified view first
         const { data, error } = await supabase
-            .from('user_profiles')
+            .from('all_users')
             .select('*')
             .eq('id', userId)
             .single()
@@ -190,7 +191,7 @@ export async function getDashboardStats() {
             supabase.from('jobs').select('id, views_count', { count: 'exact' }),
             supabase.from('blogs').select('id, views_count', { count: 'exact' }),
             supabase.from('career_insights').select('id, views_count', { count: 'exact' }),
-            supabase.from('companies').select('id', { count: 'exact' })
+            supabase.from('company_profiles').select('id', { count: 'exact' })
         ])
 
         return {

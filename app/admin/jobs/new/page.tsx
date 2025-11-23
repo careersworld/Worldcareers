@@ -13,7 +13,7 @@ import { ChevronLeft, Plus, Building2 } from 'lucide-react'
 import RichText, { type RichTextHandle } from '@/components/ui/rich-text'
 import type { Company } from '@/lib/types'
 
-export default function NewJobPage(){
+export default function NewJobPage() {
   const editorRef = useRef<RichTextHandle | null>(null)
   const [title, setTitle] = useState('')
   const [location, setLocation] = useState('')
@@ -23,17 +23,17 @@ export default function NewJobPage(){
   const [applicationLink, setApplicationLink] = useState('')
   const [deadline, setDeadline] = useState('')
   const [saving, setSaving] = useState(false)
-  
+
   // Company selection
   const [companies, setCompanies] = useState<Company[]>([])
   const [companySearch, setCompanySearch] = useState('')
   const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([])
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false)
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
-  
+
   // Available categories from database
   const [availableCategories, setAvailableCategories] = useState<string[]>([])
-  
+
   const router = useRouter()
   const supabase = createClient()
 
@@ -44,7 +44,7 @@ export default function NewJobPage(){
 
   useEffect(() => {
     if (companySearch.trim()) {
-      const filtered = companies.filter(c => 
+      const filtered = companies.filter(c =>
         c.name.toLowerCase().includes(companySearch.toLowerCase())
       )
       setFilteredCompanies(filtered)
@@ -58,16 +58,25 @@ export default function NewJobPage(){
   const fetchCompanies = async () => {
     try {
       const { data, error } = await supabase
-        .from('companies')
+        .from('company_profiles')
         .select('*')
-        .order('name')
-      
+        .order('company_name')
+
       if (error) {
-        console.warn('Companies table not found, will create companies on the fly:', error)
+        console.warn('Company profiles table not found, will create companies on the fly:', error)
         setCompanies([])
         return
       }
-      setCompanies(data || [])
+
+      const mappedData = data?.map((p: any) => ({
+        id: p.id,
+        name: p.company_name,
+        logo_url: p.logo_url,
+        description: p.description,
+        website: p.website_url
+      })) || []
+
+      setCompanies(mappedData)
     } catch (error) {
       console.error('Error fetching companies:', error)
       setCompanies([])
@@ -79,19 +88,19 @@ export default function NewJobPage(){
       const { data, error } = await supabase
         .from('jobs')
         .select('category')
-      
+
       if (error) {
         console.error('Error fetching categories:', error)
         return
       }
-      
+
       // Get unique categories that exist in the database
       const uniqueCategories = Array.from(new Set(
         data
           ?.map(job => job.category)
           .filter((cat): cat is string => cat !== null && cat !== undefined && cat !== '')
       ))
-      
+
       setAvailableCategories(uniqueCategories.sort())
     } catch (error) {
       console.error('Error fetching categories:', error)
@@ -101,7 +110,7 @@ export default function NewJobPage(){
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
-    try{
+    try {
       let companyId = selectedCompany?.id
       let companyName = selectedCompany?.name || companySearch.trim()
       let companyLogoUrl = selectedCompany?.logo_url || ''
@@ -113,7 +122,7 @@ export default function NewJobPage(){
       }
 
       const description = editorRef.current?.getHTML() || ''
-      
+
       if (!description || description.trim() === '') {
         alert('Please provide a job description')
         setSaving(false)
@@ -126,27 +135,27 @@ export default function NewJobPage(){
         return
       }
 
-      const jobData: any = { 
-        title, 
+      const jobData: any = {
+        title,
         company: companyName,
-        location, 
-        job_type: jobType, 
+        location,
+        job_type: jobType,
         location_type: locationType,
         category,
-        application_link: applicationLink, 
-        description 
+        application_link: applicationLink,
+        description
       }
-      
+
       // Add optional fields
       if (companyId) jobData.company_id = companyId
       if (companyLogoUrl) jobData.company_logo_url = companyLogoUrl
       if (deadline) jobData.deadline = deadline
-      
+
       console.log('Submitting job data:', jobData)
-      
+
       const { data: insertedJob, error } = await supabase.from('jobs').insert([jobData]).select()
-      
-      if(error) {
+
+      if (error) {
         console.error('Database error details:', {
           message: error.message,
           details: error.details,
@@ -155,18 +164,18 @@ export default function NewJobPage(){
         })
         throw new Error(error.message || 'Failed to insert job')
       }
-      
+
       console.log('Job created successfully:', insertedJob)
       router.push('/admin')
-    }catch(err: any){
+    } catch (err: any) {
       console.error('Failed to create job:', {
         error: err,
         message: err?.message,
         stack: err?.stack
       })
       alert(`Failed to create job: ${err?.message || JSON.stringify(err) || 'Unknown error'}`)
-    }finally{ 
-      setSaving(false) 
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -191,21 +200,21 @@ export default function NewJobPage(){
           </div>
         </div>
       </div>
-      
+
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card className="p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <Label htmlFor="title">Job Title *</Label>
-              <Input 
+              <Input
                 id="title"
-                placeholder="e.g. Senior Full Stack Developer" 
-                value={title} 
-                onChange={(e)=>setTitle(e.target.value)} 
-                required 
+                placeholder="e.g. Senior Full Stack Developer"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
               />
             </div>
-            
+
             {/* Company Selection */}
             <div className="space-y-4">
               <Label>Company *</Label>
@@ -282,44 +291,44 @@ export default function NewJobPage(){
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="location">Location *</Label>
-                <Input 
+                <Input
                   id="location"
-                  placeholder="e.g. Kigali, Rwanda" 
-                  value={location} 
-                  onChange={(e)=>setLocation(e.target.value)} 
-                  required 
+                  placeholder="e.g. Kigali, Rwanda"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  required
                 />
               </div>
               <div>
                 <Label htmlFor="deadline">Application Deadline</Label>
-                <Input 
+                <Input
                   id="deadline"
-                  type="date" 
-                  value={deadline} 
-                  onChange={(e)=>setDeadline(e.target.value)} 
+                  type="date"
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
                 />
               </div>
             </div>
-            
+
             <div>
               <Label htmlFor="applicationLink">Application Link *</Label>
-              <Input 
+              <Input
                 id="applicationLink"
-                placeholder="https://company.com/apply" 
-                value={applicationLink} 
-                onChange={(e)=>setApplicationLink(e.target.value)} 
-                required 
+                placeholder="https://company.com/apply"
+                value={applicationLink}
+                onChange={(e) => setApplicationLink(e.target.value)}
+                required
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="jobType">Job Type *</Label>
-                <select 
+                <select
                   id="jobType"
-                  value={jobType} 
-                  onChange={(e)=>setJobType(e.target.value)} 
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37]" 
+                  value={jobType}
+                  onChange={(e) => setJobType(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                   required
                 >
                   <option value="full-time">Full-time</option>
@@ -330,11 +339,11 @@ export default function NewJobPage(){
               </div>
               <div>
                 <Label htmlFor="locationType">Location Type *</Label>
-                <select 
+                <select
                   id="locationType"
-                  value={locationType} 
-                  onChange={(e)=>setLocationType(e.target.value)} 
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37]" 
+                  value={locationType}
+                  onChange={(e) => setLocationType(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                   required
                 >
                   <option value="remote">Remote</option>
@@ -346,11 +355,11 @@ export default function NewJobPage(){
 
             <div>
               <Label htmlFor="category">Category *</Label>
-              <select 
+              <select
                 id="category"
-                value={category} 
-                onChange={(e)=>setCategory(e.target.value)} 
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37]" 
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
                 required
               >
                 <option value="">Select a category</option>

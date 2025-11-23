@@ -46,6 +46,29 @@ export function JobManagement({ onUpdate }: JobManagementProps) {
 
   useEffect(() => {
     fetchJobs()
+
+    // Set up real-time subscription for job updates
+    const channel = supabase
+      .channel('jobs-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'jobs'
+        },
+        (payload: any) => {
+          console.log('Job updated:', payload)
+          // Refresh jobs when any change occurs
+          fetchJobs()
+        }
+      )
+      .subscribe()
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const fetchJobs = async () => {
@@ -72,7 +95,7 @@ export function JobManagement({ onUpdate }: JobManagementProps) {
       setEditingJob(null)
       setFormData({
         title: '',
-        company: '',
+        company_name: '',
         company_logo_url: '',
         description: '',
         location: '',
@@ -170,7 +193,7 @@ export function JobManagement({ onUpdate }: JobManagementProps) {
                 jobs.map(job => (
                   <TableRow key={job.id}>
                     <TableCell className="font-medium">{job.title}</TableCell>
-                    <TableCell>{job.company}</TableCell>
+                    <TableCell>{job.company_name}</TableCell>
                     <TableCell className="text-center">{job.views_count || 0}</TableCell>
                     <TableCell className="text-center">{job.applications_count || 0}</TableCell>
                     <TableCell>{formatDate(job.created_at)}</TableCell>
@@ -223,8 +246,8 @@ export function JobManagement({ onUpdate }: JobManagementProps) {
             <div>
               <label className="text-sm font-semibold mb-1 block">Company</label>
               <Input
-                value={formData.company || ''}
-                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                value={formData.company_name || ''}
+                onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
               />
             </div>
             <div>

@@ -10,11 +10,11 @@ import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/lib/supabase/client'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
-import { 
-  Briefcase, 
-  Bookmark, 
-  FileText, 
-  Upload, 
+import {
+  Briefcase,
+  Bookmark,
+  FileText,
+  Upload,
   PenSquare,
   User,
   Settings,
@@ -54,10 +54,12 @@ export default function CandidateDashboard() {
   const [profile, setProfile] = useState<any>(null)
   const [applications, setApplications] = useState<Application[]>([])
   const [savedJobs, setSavedJobs] = useState<Job[]>([])
+  const [viewedJobs, setViewedJobs] = useState<Job[]>([])
   const [stats, setStats] = useState({
     applied: 0,
     saved: 0,
-    views: 0
+    views: 0,
+    jobsViewed: 0
   })
 
   useEffect(() => {
@@ -67,20 +69,25 @@ export default function CandidateDashboard() {
   const checkAuth = async () => {
     try {
       const { data: { user }, error } = await supabase.auth.getUser()
-      
+
       if (error || !user) {
         router.push('/login')
         return
       }
 
       const { data: profileData } = await supabase
-        .from('user_profiles')
+        .from('candidate_profiles')
         .select('*')
         .eq('id', user.id)
         .single()
 
-      if (profileData?.role === 'admin') {
+      // Check if user is actually a candidate
+      if (user.user_metadata?.role === 'admin') {
         router.push('/admin')
+        return
+      }
+      if (user.user_metadata?.role === 'company') {
+        router.push('/company/dashboard')
         return
       }
 
@@ -97,7 +104,7 @@ export default function CandidateDashboard() {
 
   const fetchDashboardData = async (userId: string) => {
     try {
-      // Fetch applications (if table exists)
+      // Fetch applications
       const { data: appsData } = await supabase
         .from('job_applications')
         .select(`
@@ -140,11 +147,12 @@ export default function CandidateDashboard() {
         jobs: Array.isArray(app.jobs) ? app.jobs[0] : app.jobs
       })).filter((app: Application) => app.jobs) || [])
       setSavedJobs(savedData?.map((s: any) => s.jobs).filter(Boolean) || [])
-      
+
       setStats({
         applied: appsData?.length || 0,
         saved: savedData?.length || 0,
-        views: profile?.profile_views || 0
+        views: profile?.profile_views || 0,
+        jobsViewed: 0 // Tracking removed for simplification
       })
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -162,10 +170,10 @@ export default function CandidateDashboard() {
   }
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
+    return new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
     })
   }
 
@@ -331,7 +339,7 @@ export default function CandidateDashboard() {
                           <div className="flex justify-between items-start mb-2">
                             <div>
                               <h3 className="font-semibold text-lg">{app.jobs.title}</h3>
-                              <p className="text-gray-600">{app.jobs.company}</p>
+                              <p className="text-gray-600">{app.jobs.company_name}</p>
                               <p className="text-sm text-gray-500">{app.jobs.location}</p>
                             </div>
                             <Badge className={getStatusColor(app.status)}>
@@ -371,7 +379,7 @@ export default function CandidateDashboard() {
                           <div className="flex justify-between items-start">
                             <div>
                               <h3 className="font-semibold text-lg">{job.title}</h3>
-                              <p className="text-gray-600">{job.company}</p>
+                              <p className="text-gray-600">{job.company_name}</p>
                               <p className="text-sm text-gray-500">{job.location} • {job.job_type}</p>
                             </div>
                             <Link href={`/job/${job.id}`}>

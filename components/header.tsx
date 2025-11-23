@@ -30,13 +30,9 @@ export function Header() {
     setIsLoggedIn(!!session)
 
     if (session?.user) {
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('id', session.user.id)
-        .single()
-
-      setUserRole(profile?.role || null)
+      // Use metadata for role (set by trigger)
+      const role = session.user.user_metadata?.role || 'candidate'
+      setUserRole(role)
     } else {
       setUserRole(null)
     }
@@ -44,6 +40,7 @@ export function Header() {
 
   const getDashboardLink = () => {
     if (userRole === 'admin') return '/admin'
+    if (userRole === 'company') return '/company/dashboard'
     return '/candidate/dashboard'
   }
 
@@ -54,7 +51,7 @@ export function Header() {
           <Link href="/" className="font-bold text-lg sm:text-2xl text-[#1a1a1a]">
             WorldCareers
           </Link>
-          
+
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             <Link href="/" className="text-[#1a1a1a] hover:text-[#D4AF37] transition-colors">
@@ -98,7 +95,7 @@ export function Header() {
           </div>
 
           {/* Mobile Menu Button */}
-          <button 
+          <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-2 text-[#1a1a1a] text-lg font-bold"
           >

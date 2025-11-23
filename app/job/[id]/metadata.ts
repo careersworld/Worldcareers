@@ -16,17 +16,17 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     }
   }
 
-  const title = `${job.title} at ${job.company} - ${job.location}`
-  const description = job.description ? 
-    job.description.replace(/<[^>]*>/g, '').substring(0, 160) : 
-    `Apply for ${job.title} position at ${job.company} in ${job.location}. ${job.job_type} - ${job.location_type}`
+  const title = `${job.title} at ${job.company_name} - ${job.location}`
+  const description = job.description ?
+    job.description.replace(/<[^>]*>/g, '').substring(0, 160) :
+    `Apply for ${job.title} position at ${job.company_name} in ${job.location}. ${job.job_type} - ${job.location_type}`
 
   return {
     title,
     description,
     keywords: [
       job.title,
-      job.company,
+      job.company_name,
       job.location,
       `${job.title} Rwanda`,
       `jobs in ${job.location}`,

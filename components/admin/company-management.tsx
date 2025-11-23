@@ -40,12 +40,21 @@ export function CompanyManagement() {
   const fetchCompanies = async () => {
     try {
       const { data, error } = await supabase
-        .from('companies')
+        .from('company_profiles')
         .select('*')
-        .order('name')
-      
+        .order('company_name')
+
       if (error) throw error
-      setCompanies(data || [])
+
+      const mappedData = data?.map((p: any) => ({
+        id: p.id,
+        name: p.company_name,
+        logo_url: p.logo_url,
+        description: p.description,
+        website: p.website_url
+      })) || []
+
+      setCompanies(mappedData)
     } catch (error) {
       console.error('Error fetching companies:', error)
     } finally {
@@ -75,30 +84,22 @@ export function CompanyManagement() {
       if (editingCompany) {
         // Update
         const { error } = await supabase
-          .from('companies')
+          .from('company_profiles')
           .update({
-            name: formData.name,
+            company_name: formData.name,
             logo_url: formData.logo_url,
             description: formData.description,
-            website: formData.website
+            website_url: formData.website
           })
           .eq('id', editingCompany.id)
-        
+
         if (error) throw error
       } else {
-        // Create
-        const { error } = await supabase
-          .from('companies')
-          .insert([{
-            name: formData.name,
-            logo_url: formData.logo_url || null,
-            description: formData.description || null,
-            website: formData.website || null
-          }])
-        
-        if (error) throw error
+        // Create is not supported directly here anymore, must invite
+        alert('Please use the "Add Company" button to invite a new company.')
+        return
       }
-      
+
       await fetchCompanies()
       handleCloseDialog()
     } catch (error: any) {
@@ -111,10 +112,10 @@ export function CompanyManagement() {
     if (!confirm('Are you sure you want to delete this company? This will NOT delete associated jobs.')) return
     try {
       const { error } = await supabase
-        .from('companies')
+        .from('company_profiles')
         .delete()
         .eq('id', id)
-      
+
       if (error) throw error
       await fetchCompanies()
     } catch (error) {
@@ -164,8 +165,8 @@ export function CompanyManagement() {
                   <TableRow key={company.id}>
                     <TableCell>
                       {company.logo_url ? (
-                        <img 
-                          src={company.logo_url} 
+                        <img
+                          src={company.logo_url}
                           alt={company.name}
                           className="w-12 h-12 object-contain rounded"
                         />
@@ -181,9 +182,9 @@ export function CompanyManagement() {
                     </TableCell>
                     <TableCell>
                       {company.website ? (
-                        <a 
-                          href={company.website} 
-                          target="_blank" 
+                        <a
+                          href={company.website}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="text-blue-600 hover:underline text-sm"
                         >
@@ -248,9 +249,9 @@ export function CompanyManagement() {
                 placeholder="https://example.com/logo.png"
               />
               {formData.logo_url && (
-                <img 
-                  src={formData.logo_url} 
-                  alt="Preview" 
+                <img
+                  src={formData.logo_url}
+                  alt="Preview"
                   className="mt-2 w-16 h-16 object-contain rounded border"
                 />
               )}
@@ -281,7 +282,7 @@ export function CompanyManagement() {
               <Button variant="outline" onClick={handleCloseDialog}>
                 Cancel
               </Button>
-              <Button 
+              <Button
                 className="bg-[#1a1a1a] text-white"
                 onClick={handleSaveCompany}
                 disabled={!formData.name}

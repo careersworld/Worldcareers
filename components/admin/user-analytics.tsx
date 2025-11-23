@@ -37,24 +37,24 @@ export function UserAnalytics() {
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
 
-      // Fetch all user profiles directly (admin.listUsers requires service role)
+      // Fetch all users from the unified view
       const { data: profiles, error: profileError } = await supabase
-        .from('user_profiles')
+        .from('all_users')
         .select('*')
         .order('created_at', { ascending: false })
 
       if (profileError) throw profileError
 
       // Use profiles as the source of truth
-      const mergedUsers = profiles?.map(profile => {
+      const mergedUsers = profiles?.map((profile: any) => {
         return {
           id: profile.id,
           email: profile.email || 'N/A',
           role: profile.role || 'candidate',
-          first_name: profile.first_name || null,
+          first_name: profile.first_name || (profile.company_name ? profile.company_name : null),
           last_name: profile.last_name || null,
           created_at: profile.created_at,
-          last_sign_in_at: profile.updated_at || null // Use updated_at as proxy for activity
+          last_sign_in_at: null // Not available in this view
         }
       }) || []
 
@@ -83,9 +83,9 @@ export function UserAnalytics() {
 
   const formatDate = (date: string | null) => {
     if (!date) return 'Never'
-    return new Date(date).toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -174,8 +174,8 @@ export function UserAnalytics() {
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.email}</TableCell>
                     <TableCell>
-                      {user.first_name && user.last_name 
-                        ? `${user.first_name} ${user.last_name}` 
+                      {user.first_name && user.last_name
+                        ? `${user.first_name} ${user.last_name}`
                         : <span className="text-gray-400">Not set</span>
                       }
                     </TableCell>

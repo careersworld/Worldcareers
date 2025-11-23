@@ -43,33 +43,19 @@ export default function LoginPage() {
 
       console.log('Authentication successful, fetching profile...')
 
-      // Get user profile to check role
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('id', authData.user.id)
-        .single()
+      console.log('Authentication successful, checking role...')
 
-      if (profileError) {
-        console.error('Error fetching profile:', profileError)
-        setError(`Profile error: ${profileError.message}. Please contact support.`)
-        setLoading(false)
-        return
-      }
-
-      if (!profile) {
-        console.error('No profile found for user')
-        setError('User profile not found. Please contact support.')
-        setLoading(false)
-        return
-      }
-
-      console.log('Profile found, role:', profile.role)
+      // Use metadata for role (set by trigger)
+      const role = authData.user.user_metadata?.role || 'candidate'
+      console.log('Role found:', role)
 
       // Redirect based on role using full page reload to ensure session is recognized
-      if (profile.role === 'admin') {
+      if (role === 'admin') {
         console.log('Redirecting to admin dashboard')
         window.location.href = '/admin'
+      } else if (role === 'company') {
+        console.log('Redirecting to company dashboard')
+        window.location.href = '/company/dashboard'
       } else {
         console.log('Redirecting to candidate dashboard')
         window.location.href = '/candidate/dashboard'

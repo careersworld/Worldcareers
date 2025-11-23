@@ -20,6 +20,7 @@ export default function SignupPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+  const router = useRouter()
   const supabase = createClient()
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -35,20 +36,30 @@ export default function SignupPage() {
     setLoading(true)
 
     try {
-      const { error } = await supabase.auth.signUp({
+      // Sign up with email confirmation disabled
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            email_confirm: false // Disable email confirmation
+          }
         },
       })
 
       if (error) throw error
 
-      setSuccess(true)
-      setEmail('')
-      setPassword('')
-      setConfirmPassword('')
+      // Check if user was created successfully
+      if (data.user) {
+        setSuccess(true)
+
+        // Auto-login and redirect after a brief delay
+        setTimeout(() => {
+          router.push('/candidate/dashboard')
+          router.refresh()
+        }, 1500)
+      }
     } catch (error: any) {
       setError(error.message || 'Failed to sign up')
     } finally {
@@ -75,7 +86,7 @@ export default function SignupPage() {
             {success && (
               <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
                 <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-                <p className="text-sm text-green-700">Account created! Check your email to confirm.</p>
+                <p className="text-sm text-green-700">Account created successfully! Redirecting to dashboard...</p>
               </div>
             )}
 

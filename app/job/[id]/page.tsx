@@ -12,6 +12,7 @@ import Link from 'next/link'
 import type { Job } from '@/lib/types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS } from '@/lib/constants'
 import { ChevronLeft, Briefcase, MapPin, Globe, Clock, Eye, Users } from 'lucide-react'
+import { trackView } from '@/lib/utils/view-tracking'
 
 function sanitizeHtml(html: string) {
   // Minimal sanitizer: remove script/style tags and on* attributes
@@ -52,6 +53,10 @@ export default function JobDetailPage() {
           setNotFound(true)
         } else {
           setJob(data)
+
+          // Track view after job is loaded
+          const { data: { user } } = await supabase.auth.getUser()
+          await trackView('job', data.id, user?.id)
         }
       } catch (error) {
         console.error('Error fetching job:', error)
@@ -110,7 +115,7 @@ export default function JobDetailPage() {
   )
 
   const deadlineDate = job.deadline ? new Date(job.deadline) : null
-  const daysUntilDeadline = deadlineDate 
+  const daysUntilDeadline = deadlineDate
     ? Math.ceil((deadlineDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null
 
@@ -125,7 +130,7 @@ export default function JobDetailPage() {
     "employmentType": job.job_type.toUpperCase(),
     "hiringOrganization": {
       "@type": "Organization",
-      "name": job.company,
+      "name": job.company_name,
       "logo": job.company_logo_url || undefined,
       "sameAs": job.company_logo_url || undefined
     },
@@ -144,15 +149,15 @@ export default function JobDetailPage() {
   }
 
   const pageUrl = typeof window !== 'undefined' ? window.location.href : ''
-  const pageTitle = `${job.title} at ${job.company} | WorldCareers Rwanda`
-  const pageDescription = job.description?.replace(/<[^>]*>/g, '').substring(0, 160) || `Apply for ${job.title} position at ${job.company} in ${job.location}`
+  const pageTitle = `${job.title} at ${job.company_name} | WorldCareers Rwanda`
+  const pageDescription = job.description?.replace(/<[^>]*>/g, '').substring(0, 160) || `Apply for ${job.title} position at ${job.company_name} in ${job.location}`
 
   return (
     <>
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
-        
+
         {/* Open Graph */}
         <meta property="og:type" content="article" />
         <meta property="og:title" content={pageTitle} />
@@ -160,19 +165,19 @@ export default function JobDetailPage() {
         <meta property="og:url" content={pageUrl} />
         {job.company_logo_url && <meta property="og:image" content={job.company_logo_url} />}
         <meta property="og:site_name" content="WorldCareers Rwanda" />
-        
+
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={pageTitle} />
         <meta name="twitter:description" content={pageDescription} />
         {job.company_logo_url && <meta name="twitter:image" content={job.company_logo_url} />}
-        
+
         {/* WhatsApp specific */}
         {job.company_logo_url && <meta property="og:image:secure_url" content={job.company_logo_url} />}
         <meta property="og:image:type" content="image/png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
-        
+
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jobPostingSchema) }}
@@ -192,9 +197,9 @@ export default function JobDetailPage() {
             <div className="mb-6">
               <div className="flex gap-4 items-start mb-4">
                 {job.company_logo_url && (
-                  <img 
-                    src={job.company_logo_url} 
-                    alt={`${job.company} logo`}
+                  <img
+                    src={job.company_logo_url}
+                    alt={`${job.company_name} logo`}
                     className="w-16 h-16 sm:w-20 sm:h-20 object-contain rounded-lg border flex-shrink-0"
                   />
                 )}
@@ -202,7 +207,7 @@ export default function JobDetailPage() {
                   <h1 className="text-3xl font-bold text-[#1a1a1a] mb-2">
                     {job.title}
                   </h1>
-                  <p className="text-xl text-gray-700 mb-3">{job.company}</p>
+                  <p className="text-xl text-gray-700 mb-3">{job.company_name}</p>
                   <div className="flex items-center gap-2 text-gray-600">
                     <MapPin className="w-5 h-5" />
                     <span className="text-lg">{job.location}</span>
@@ -265,18 +270,17 @@ export default function JobDetailPage() {
                         {deadlineDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                       </p>
                       {daysUntilDeadline !== null && (
-                        <p className={`text-xs font-medium ${
-                          daysUntilDeadline < 0 
-                            ? 'text-red-600' 
-                            : daysUntilDeadline <= 7 
-                            ? 'text-orange-600' 
+                        <p className={`text-xs font-medium ${daysUntilDeadline < 0
+                          ? 'text-red-600'
+                          : daysUntilDeadline <= 7
+                            ? 'text-orange-600'
                             : 'text-green-600'
-                        }`}>
-                          {daysUntilDeadline < 0 
+                          }`}>
+                          {daysUntilDeadline < 0
                             ? `Expired ${Math.abs(daysUntilDeadline)} ${Math.abs(daysUntilDeadline) === 1 ? 'day' : 'days'} ago`
                             : daysUntilDeadline === 0
-                            ? 'Deadline today!'
-                            : `${daysUntilDeadline} ${daysUntilDeadline === 1 ? 'day' : 'days'} left`
+                              ? 'Deadline today!'
+                              : `${daysUntilDeadline} ${daysUntilDeadline === 1 ? 'day' : 'days'} left`
                           }
                         </p>
                       )}
@@ -299,10 +303,10 @@ export default function JobDetailPage() {
             {/* Apply Button */}
             <div className="border-t pt-6">
               <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                <JobShareButtons 
-                  jobId={job.id} 
-                  jobTitle={job.title} 
-                  companyName={job.company}
+                <JobShareButtons
+                  jobId={job.id}
+                  jobTitle={job.title}
+                  companyName={job.company_name}
                   jobUrl={pageUrl}
                   location={job.location}
                   jobType={JOB_TYPE_LABELS[job.job_type]}

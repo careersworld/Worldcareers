@@ -1,7 +1,7 @@
 export type Job = {
   id: string
   title: string
-  company: string
+  company_name: string
   description: string
   location: string
   job_type: 'full-time' | 'part-time' | 'internship' | 'volunteer'

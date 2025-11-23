@@ -34,14 +34,14 @@ export default function CandidateBlogNewPage() {
   const checkAuth = async () => {
     try {
       const { data: { user }, error } = await supabase.auth.getUser()
-      
+
       if (error || !user) {
         router.push('/login')
         return
       }
 
       const { data: profile } = await supabase
-        .from('user_profiles')
+        .from('candidate_profiles')
         .select('first_name, last_name')
         .eq('id', user.id)
         .single()
@@ -68,9 +68,9 @@ export default function CandidateBlogNewPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     const content = richTextRef.current?.getHTML() || ''
-    
+
     if (!blog.title || !blog.excerpt || !content) {
       alert('Please fill in all required fields')
       return

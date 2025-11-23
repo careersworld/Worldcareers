@@ -17,7 +17,7 @@ export default function CVUploadPage() {
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
-  const [cv, setCV] = useState<any>(null)
+  const [cv, setCV] = useState<string | null>(null)
   const [file, setFile] = useState<File | null>(null)
 
   useEffect(() => {
@@ -27,21 +27,27 @@ export default function CVUploadPage() {
   const checkAuth = async () => {
     try {
       const { data: { user }, error } = await supabase.auth.getUser()
-      
+
       if (error || !user) {
         router.push('/login')
         return
       }
 
+      // Check role
+      if (user.user_metadata?.role !== 'candidate') {
+        router.push('/')
+        return
+      }
+
       // Fetch existing CV
-      const { data: cvData } = await supabase
-        .from('user_profiles')
-        .select('cv_url, cv_filename')
+      const { data: profileData } = await supabase
+        .from('candidate_profiles')
+        .select('resume_url')
         .eq('id', user.id)
         .single()
 
-      if (cvData?.cv_url) {
-        setCV(cvData)
+      if (profileData?.resume_url) {
+        setCV(profileData.resume_url)
       }
     } catch (error) {
       console.error('Error checking auth:', error)
@@ -96,10 +102,9 @@ export default function CVUploadPage() {
 
       // Update user profile
       const { error: updateError } = await supabase
-        .from('user_profiles')
+        .from('candidate_profiles')
         .update({
-          cv_url: publicUrl,
-          cv_filename: file.name,
+          resume_url: publicUrl,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id)
@@ -107,7 +112,7 @@ export default function CVUploadPage() {
       if (updateError) throw updateError
 
       alert('CV uploaded successfully!')
-      setCV({ cv_url: publicUrl, cv_filename: file.name })
+      setCV(publicUrl)
       setFile(null)
     } catch (error: any) {
       console.error('Error uploading CV:', error)
@@ -126,10 +131,9 @@ export default function CVUploadPage() {
 
       // Update user profile
       const { error } = await supabase
-        .from('user_profiles')
+        .from('candidate_profiles')
         .update({
-          cv_url: null,
-          cv_filename: null,
+          resume_url: null,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id)
@@ -178,11 +182,11 @@ export default function CVUploadPage() {
                   <div className="flex items-center gap-4">
                     <File className="w-12 h-12 text-blue-500" />
                     <div className="flex-1">
-                      <p className="font-semibold">{cv.cv_filename}</p>
+                      <p className="font-semibold">Current Resume</p>
                       <p className="text-sm text-gray-500">Uploaded CV</p>
                     </div>
                     <div className="flex gap-2">
-                      <a href={cv.cv_url} target="_blank" rel="noopener noreferrer">
+                      <a href={cv} target="_blank" rel="noopener noreferrer">
                         <Button variant="outline" size="sm">
                           <Download className="w-4 h-4 mr-2" />
                           Download

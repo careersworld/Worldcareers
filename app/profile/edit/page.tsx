@@ -18,6 +18,7 @@ export default function EditProfilePage() {
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [role, setRole] = useState<string | null>(null)
   const [profile, setProfile] = useState({
     email: '',
     first_name: '',
@@ -28,7 +29,11 @@ export default function EditProfilePage() {
     phone: '',
     linkedin_url: '',
     github_url: '',
-    portfolio_url: ''
+    portfolio_url: '',
+    // Company specific
+    company_name: '',
+    website_url: '',
+    description: ''
   })
 
   useEffect(() => {
@@ -38,14 +43,21 @@ export default function EditProfilePage() {
   const fetchProfile = async () => {
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
-      
+
       if (userError || !user) {
         router.push('/login')
         return
       }
 
+      const userRole = user.user_metadata?.role || 'candidate'
+      setRole(userRole)
+
+      let table = 'candidate_profiles'
+      if (userRole === 'admin') table = 'admin_profiles'
+      if (userRole === 'company') table = 'company_profiles'
+
       const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
+        .from(table)
         .select('*')
         .eq('id', user.id)
         .single()
@@ -53,22 +65,35 @@ export default function EditProfilePage() {
       if (profileError) throw profileError
 
       if (profileData) {
-        setProfile({
-          email: user.email || '',
-          first_name: profileData.first_name || '',
-          last_name: profileData.last_name || '',
-          headline: profileData.headline || '',
-          bio: profileData.bio || '',
-          location: profileData.location || '',
-          phone: profileData.phone || '',
-          linkedin_url: profileData.linkedin_url || '',
-          github_url: profileData.github_url || '',
-          portfolio_url: profileData.portfolio_url || ''
-        })
+        if (userRole === 'company') {
+          setProfile(prev => ({
+            ...prev,
+            email: user.email || '',
+            company_name: profileData.company_name || '',
+            location: profileData.location || '',
+            website_url: profileData.website_url || '',
+            description: profileData.description || '',
+            first_name: profileData.contact_person_name || '' // Map contact person to first name for simplicity
+          }))
+        } else {
+          setProfile(prev => ({
+            ...prev,
+            email: user.email || '',
+            first_name: profileData.first_name || '',
+            last_name: profileData.last_name || '',
+            headline: profileData.headline || '',
+            bio: profileData.bio || '',
+            location: profileData.location || '',
+            phone: profileData.phone || '',
+            linkedin_url: profileData.linkedin_url || '',
+            github_url: profileData.github_url || '',
+            portfolio_url: profileData.portfolio_url || ''
+          }))
+        }
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
-      alert('Failed to load profile')
+      // alert('Failed to load profile') 
     } finally {
       setLoading(false)
     }
@@ -82,26 +107,60 @@ export default function EditProfilePage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-          headline: profile.headline,
-          bio: profile.bio,
-          location: profile.location,
-          phone: profile.phone,
-          linkedin_url: profile.linkedin_url,
-          github_url: profile.github_url,
-          portfolio_url: profile.portfolio_url,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id)
+      const userRole = user.user_metadata?.role || 'candidate'
+
+      let error;
+
+      if (userRole === 'admin') {
+        const { error: updateError } = await supabase
+          .from('admin_profiles')
+          .update({
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+          })
+          .eq('id', user.id)
+        error = updateError
+      } else if (userRole === 'company') {
+        const { error: updateError } = await supabase
+          .from('company_profiles')
+          .update({
+            company_name: profile.company_name,
+            contact_person_name: profile.first_name,
+            location: profile.location,
+            website_url: profile.website_url,
+            description: profile.description
+          })
+          .eq('id', user.id)
+        error = updateError
+      } else {
+        // Candidate
+        const { error: updateError } = await supabase
+          .from('candidate_profiles')
+          .update({
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            headline: profile.headline,
+            bio: profile.bio,
+            location: profile.location,
+            phone: profile.phone,
+            linkedin_url: profile.linkedin_url,
+            github_url: profile.github_url,
+            portfolio_url: profile.portfolio_url,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id)
+        error = updateError
+      }
 
       if (error) throw error
 
       alert('Profile updated successfully!')
-      router.push('/admin')
+
+      // Redirect based on role
+      if (userRole === 'admin') router.push('/admin')
+      else if (userRole === 'company') router.push('/company/dashboard')
+      else router.push('/candidate/dashboard')
+
     } catch (error: any) {
       console.error('Error saving profile:', error)
       alert(`Failed to save profile: ${error?.message || 'Unknown error'}`)
@@ -131,19 +190,25 @@ export default function EditProfilePage() {
     )
   }
 
+  const getDashboardLink = () => {
+    if (role === 'admin') return '/admin'
+    if (role === 'company') return '/company/dashboard'
+    return '/candidate/dashboard'
+  }
+
   return (
     <>
       <Header />
       <main className="pt-16 min-h-screen bg-gray-50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <Link href="/admin" className="inline-flex items-center text-sm text-gray-600 hover:text-[#1a1a1a] mb-6 gap-2">
+          <Link href={getDashboardLink()} className="inline-flex items-center text-sm text-gray-600 hover:text-[#1a1a1a] mb-6 gap-2">
             <ChevronLeft className="w-4 h-4" />
             Back to Dashboard
           </Link>
 
           <Card className="p-8">
             <h1 className="text-3xl font-bold mb-6">Edit Profile</h1>
-            
+
             <form onSubmit={handleSave} className="space-y-6">
               {/* Email (read-only) */}
               <div>
@@ -158,120 +223,177 @@ export default function EditProfilePage() {
                 />
               </div>
 
-              {/* Name */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="first_name">First Name</Label>
-                  <Input
-                    id="first_name"
-                    name="first_name"
-                    value={profile.first_name}
-                    onChange={handleChange}
-                    placeholder="John"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="last_name">Last Name</Label>
-                  <Input
-                    id="last_name"
-                    name="last_name"
-                    value={profile.last_name}
-                    onChange={handleChange}
-                    placeholder="Doe"
-                  />
-                </div>
-              </div>
+              {role === 'company' ? (
+                <>
+                  <div>
+                    <Label htmlFor="company_name">Company Name</Label>
+                    <Input
+                      id="company_name"
+                      name="company_name"
+                      value={profile.company_name}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="first_name">Contact Person Name</Label>
+                    <Input
+                      id="first_name"
+                      name="first_name"
+                      value={profile.first_name}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="website_url">Website URL</Label>
+                    <Input
+                      id="website_url"
+                      name="website_url"
+                      value={profile.website_url}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="location">Location</Label>
+                    <Input
+                      id="location"
+                      name="location"
+                      value={profile.location}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      name="description"
+                      value={profile.description}
+                      onChange={handleChange}
+                      rows={4}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Name */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="first_name">First Name</Label>
+                      <Input
+                        id="first_name"
+                        name="first_name"
+                        value={profile.first_name}
+                        onChange={handleChange}
+                        placeholder="John"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="last_name">Last Name</Label>
+                      <Input
+                        id="last_name"
+                        name="last_name"
+                        value={profile.last_name}
+                        onChange={handleChange}
+                        placeholder="Doe"
+                      />
+                    </div>
+                  </div>
 
-              {/* Headline */}
-              <div>
-                <Label htmlFor="headline">Professional Headline</Label>
-                <Input
-                  id="headline"
-                  name="headline"
-                  value={profile.headline}
-                  onChange={handleChange}
-                  placeholder="Software Developer | Full Stack Engineer"
-                  maxLength={100}
-                />
-              </div>
+                  {role === 'candidate' && (
+                    <>
+                      {/* Headline */}
+                      <div>
+                        <Label htmlFor="headline">Professional Headline</Label>
+                        <Input
+                          id="headline"
+                          name="headline"
+                          value={profile.headline}
+                          onChange={handleChange}
+                          placeholder="Software Developer | Full Stack Engineer"
+                          maxLength={100}
+                        />
+                      </div>
 
-              {/* Bio */}
-              <div>
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  name="bio"
-                  value={profile.bio}
-                  onChange={handleChange}
-                  placeholder="Tell us about yourself..."
-                  rows={4}
-                  maxLength={500}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  {profile.bio.length}/500 characters
-                </p>
-              </div>
+                      {/* Bio */}
+                      <div>
+                        <Label htmlFor="bio">Bio</Label>
+                        <Textarea
+                          id="bio"
+                          name="bio"
+                          value={profile.bio}
+                          onChange={handleChange}
+                          placeholder="Tell us about yourself..."
+                          rows={4}
+                          maxLength={500}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          {profile.bio.length}/500 characters
+                        </p>
+                      </div>
 
-              {/* Contact Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    name="location"
-                    value={profile.location}
-                    onChange={handleChange}
-                    placeholder="Kigali, Rwanda"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    value={profile.phone}
-                    onChange={handleChange}
-                    placeholder="+250 XXX XXX XXX"
-                  />
-                </div>
-              </div>
+                      {/* Contact Info */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="location">Location</Label>
+                          <Input
+                            id="location"
+                            name="location"
+                            value={profile.location}
+                            onChange={handleChange}
+                            placeholder="Kigali, Rwanda"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="phone">Phone</Label>
+                          <Input
+                            id="phone"
+                            name="phone"
+                            value={profile.phone}
+                            onChange={handleChange}
+                            placeholder="+250 XXX XXX XXX"
+                          />
+                        </div>
+                      </div>
 
-              {/* Social Links */}
-              <div>
-                <Label htmlFor="linkedin_url">LinkedIn URL</Label>
-                <Input
-                  id="linkedin_url"
-                  name="linkedin_url"
-                  type="url"
-                  value={profile.linkedin_url}
-                  onChange={handleChange}
-                  placeholder="https://linkedin.com/in/yourusername"
-                />
-              </div>
+                      {/* Social Links */}
+                      <div>
+                        <Label htmlFor="linkedin_url">LinkedIn URL</Label>
+                        <Input
+                          id="linkedin_url"
+                          name="linkedin_url"
+                          type="url"
+                          value={profile.linkedin_url}
+                          onChange={handleChange}
+                          placeholder="https://linkedin.com/in/yourusername"
+                        />
+                      </div>
 
-              <div>
-                <Label htmlFor="github_url">GitHub URL</Label>
-                <Input
-                  id="github_url"
-                  name="github_url"
-                  type="url"
-                  value={profile.github_url}
-                  onChange={handleChange}
-                  placeholder="https://github.com/yourusername"
-                />
-              </div>
+                      <div>
+                        <Label htmlFor="github_url">GitHub URL</Label>
+                        <Input
+                          id="github_url"
+                          name="github_url"
+                          type="url"
+                          value={profile.github_url}
+                          onChange={handleChange}
+                          placeholder="https://github.com/yourusername"
+                        />
+                      </div>
 
-              <div>
-                <Label htmlFor="portfolio_url">Portfolio URL</Label>
-                <Input
-                  id="portfolio_url"
-                  name="portfolio_url"
-                  type="url"
-                  value={profile.portfolio_url}
-                  onChange={handleChange}
-                  placeholder="https://yourportfolio.com"
-                />
-              </div>
+                      <div>
+                        <Label htmlFor="portfolio_url">Portfolio URL</Label>
+                        <Input
+                          id="portfolio_url"
+                          name="portfolio_url"
+                          type="url"
+                          value={profile.portfolio_url}
+                          onChange={handleChange}
+                          placeholder="https://yourportfolio.com"
+                        />
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
 
               {/* Actions */}
               <div className="flex gap-4 pt-4">

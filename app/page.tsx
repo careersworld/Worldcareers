@@ -36,7 +36,12 @@ export default function Home() {
         if (error) throw error
         setJobs(data || [])
       } catch (error) {
-        console.error('Error fetching jobs:', error)
+        console.error('Error fetching jobs:', JSON.stringify(error, null, 2))
+        // Check if env vars are available (do not log values)
+        console.log('Supabase config:', {
+          url: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+          key: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        })
         setJobs([])
       } finally {
         setLoading(false)
@@ -52,7 +57,7 @@ export default function Home() {
     if (searchTerm) {
       result = result.filter(job =>
         job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        job.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         job.description.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
@@ -64,7 +69,7 @@ export default function Home() {
     if (filters.locationType && filters.locationType.length > 0) {
       result = result.filter(job => filters.locationType?.includes(job.location_type))
     }
-    
+
     if (filters.location && Array.isArray(filters.location) && filters.location.length > 0) {
       result = result.filter(job => {
         const jobLocation = job.location?.split(',')[0].trim()
@@ -108,7 +113,7 @@ export default function Home() {
       <Header />
       <main className="pt-16">
         {/* Hero Section */}
-        <section className="bg-[#FFF8DC] border-b border-gray-200">
+        <section className="bg-[#FFF8DC]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 md:py-14">
             <div className="text-center mb-6 sm:mb-8">
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#1a1a1a] mb-2 sm:mb-3">
@@ -156,9 +161,8 @@ export default function Home() {
 
           <div className="flex flex-col md:flex-row gap-6">
             {/* Sidebar Filter */}
-            <div className={`${
-              mobileFilterOpen ? 'block' : 'hidden'
-            } md:block md:w-64 shrink-0`}>
+            <div className={`${mobileFilterOpen ? 'block' : 'hidden'
+              } md:block md:w-64 shrink-0`}>
               <FilterPanel
                 filters={filters}
                 onFilterChange={setFilters}

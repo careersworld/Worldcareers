@@ -17,22 +17,22 @@ export function JobCard({ job }: JobCardProps) {
     const deadline = new Date(job.deadline)
     const now = new Date()
     const daysRemaining = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-    
+
     if (daysRemaining < 0) return { text: 'Expired', color: 'text-red-600' }
     if (daysRemaining === 0) return { text: 'Today', color: 'text-orange-600' }
     if (daysRemaining === 1) return { text: '1 day left', color: 'text-orange-500' }
     if (daysRemaining <= 7) return { text: `${daysRemaining} days left`, color: 'text-yellow-600' }
     return { text: `${daysRemaining} days left`, color: 'text-muted-foreground' }
   }
-  
+
   const getPostedTime = () => {
     const posted = new Date(job.created_at)
     const now = new Date()
     const diffInHours = Math.floor((now.getTime() - posted.getTime()) / (1000 * 60 * 60))
-    
+
     if (diffInHours < 1) return 'Just now'
     if (diffInHours < 24) return `${diffInHours}h ago`
-    
+
     const diffInDays = Math.floor(diffInHours / 24)
     if (diffInDays === 1) return '1 day ago'
     if (diffInDays < 7) return `${diffInDays} days ago`
@@ -51,14 +51,14 @@ export function JobCard({ job }: JobCardProps) {
     <Card className="p-4 sm:p-6 hover:shadow-lg transition-shadow">
       <div className="flex gap-3 sm:gap-4 items-start mb-3 sm:mb-4">
         <Avatar className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex-shrink-0">
-          <AvatarImage src={job.company_logo_url || ''} alt={job.company} />
+          <AvatarImage src={job.company_logo_url || ''} alt={job.company_name} />
           <AvatarFallback className="rounded-lg bg-[#D4AF37]/10 text-[#D4AF37] font-semibold text-xs sm:text-sm">
-            {job.company.substring(0, 2).toUpperCase()}
+            {job.company_name.substring(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
           <h3 className="font-bold text-sm sm:text-lg text-foreground line-clamp-2">{job.title}</h3>
-          <p className="text-xs sm:text-sm text-muted-foreground truncate">{job.company}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground truncate">{job.company_name}</p>
         </div>
       </div>
 
@@ -104,10 +104,10 @@ export function JobCard({ job }: JobCardProps) {
         )}
         {!deadlineInfo && <div className="hidden sm:block" />}
         <div className="flex gap-2 w-full sm:w-auto">
-          <JobShareButtons 
-            jobId={job.id} 
-            jobTitle={job.title} 
-            companyName={job.company}
+          <JobShareButtons
+            jobId={job.id}
+            jobTitle={job.title}
+            companyName={job.company_name}
             location={job.location}
             jobType={JOB_TYPE_LABELS[job.job_type]}
             applicationLink={job.application_link}
